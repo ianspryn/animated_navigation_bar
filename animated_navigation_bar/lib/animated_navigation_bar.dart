@@ -29,7 +29,7 @@ class AnimatedBottomBar extends StatefulWidget {
   ///Sets the adding on the left and right side
   final int navigationPadding;
 
-  ///The padding between the selector pill and the icon and text inside
+  ///The left and right padding between the selector pill and the icon and text inside
   final int selectorPillPadding;
 
   AnimatedBottomBar(
@@ -37,7 +37,7 @@ class AnimatedBottomBar extends StatefulWidget {
       this.onBarTap,
       this.height = 85,
       this.selectorPillHeight = 40,
-      this.selectorPillPadding = 30,
+      this.selectorPillPadding = 15,
       this.animationTime = 400,
       this.startIndex = 0,
       this.color = const Color(0xFFe34288),
@@ -69,7 +69,10 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
         vsync: this, duration: Duration(milliseconds: widget.animationTime));
     _positionTween = Tween<double>(begin: 0, end: 0);
     _positionAnimation = _positionTween.animate(CurvedAnimation(
-        parent: _animationController, curve: Curves.easeOutExpo));
+        parent: _animationController, curve: Curves.easeOutExpo))
+      ..addListener(() {
+        setState(() {});
+      });
     _positionTween.begin = -1;
 
     for (int i = 0; i < widget.barItems.length; i++) {
@@ -78,7 +81,6 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
   }
 
   _afterLayout(_) {
-    selectedBarIndex = widget.startIndex;
     _updateSelectorPillWidth();
   }
 
@@ -98,30 +100,31 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.only(top: 0, bottom: 0, left: 30, right: 30),
-//            padding: const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 0),
+        padding: EdgeInsets.only(
+            top: 0,
+            bottom: 0,
+            left: widget.navigationPadding.toDouble(),
+            right: widget.navigationPadding.toDouble()),
         child: Stack(
           children: <Widget>[
             IgnorePointer(
-              child: Container(
-                child: Align(
-                  alignment: Alignment(_positionAnimation.value, 0),
-                  child: AnimatedContainer(
-                    height: widget.selectorPillHeight,
-                    width: _selectorWidth,
-                    duration: Duration(
-                        milliseconds: (widget.animationTime / 3).round()),
-                    curve: Curves.easeOutExpo,
-                    decoration: BoxDecoration(
-                        shape: BoxShape.rectangle,
-                        borderRadius: BorderRadius.all(Radius.circular(20)),
-                        color: widget.color,
-                        boxShadow: [
-                          BoxShadow(
-                              color: widget.color.withOpacity(0.6),
-                              blurRadius: 15)
-                        ]),
-                  ),
+              child: Align(
+                alignment: Alignment(_positionAnimation.value, 0),
+                child: AnimatedContainer(
+                  height: widget.selectorPillHeight,
+                  width: _selectorWidth,
+                  duration: Duration(
+                      milliseconds: (widget.animationTime / 3).round()),
+                  curve: Curves.easeOutExpo,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.rectangle,
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                      color: widget.color,
+                      boxShadow: [
+                        BoxShadow(
+                            color: widget.color.withOpacity(0.6),
+                            blurRadius: 15)
+                      ]),
                 ),
               ),
             ),
@@ -149,8 +152,7 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
             setState(() {
               selectedBarIndex = i;
               widget.onBarTap(selectedBarIndex);
-              _initAnimationAndStart(_positionAnimation.value,
-                  i - 1.0 - i / (widget.barItems.length - 1));
+              _initAnimationAndStart(_positionAnimation.value, -1 + (i / (widget.barItems.length - 1)) * 2);
               _updateSelectorPillWidth();
             });
           },
@@ -158,22 +160,21 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
             alignment: Alignment.center,
             children: <Widget>[
               AnimatedContainer(
-                width: isSelected
-                    ? 0
-                    : (MediaQuery.of(context).size.width -
-                            (_selectorWidth + widget.navigationPadding * 4)) /
-                        (widget.barItems.length),
+                width: (MediaQuery.of(context).size.width - widget.navigationPadding * 2) / (widget.barItems.length * 1.5),
+//                width:  (MediaQuery.of(context).size.width -
+//                            (_selectorWidth + widget.navigationPadding * 4)) /
+//                        (widget.barItems.length),
                 //to completely fill, set to (widget.barItems.length - 1), but that causes fractional overflow
                 height: widget.height,
                 decoration:
-                    BoxDecoration(color: Colors.cyanAccent.withOpacity(0.0)),
+                    BoxDecoration(color: Colors.cyanAccent.withOpacity(0.0)), //tapable area (also use for debugging)
                 curve: Curves.easeOutExpo,
                 duration: Duration(milliseconds: widget.animationTime),
               ),
               Padding(
                 padding: EdgeInsets.only(
-                    left: widget.navigationPadding.toDouble(),
-                    right: widget.navigationPadding.toDouble()),
+                    left: widget.selectorPillPadding.toDouble(),
+                    right: widget.selectorPillPadding.toDouble()),
                 child: Row(
                   key: _tabItemKeys[i],
                   children: <Widget>[
@@ -202,7 +203,7 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
   _updateSelectorPillWidth() {
     final RenderBox _renderBoxTab =
         _tabItemKeys[selectedBarIndex].currentContext.findRenderObject();
-    _selectorWidth = _renderBoxTab.size.width + widget.selectorPillPadding;
+    _selectorWidth = _renderBoxTab.size.width + widget.selectorPillPadding * 2;
   }
 
   _initAnimationAndStart(double from, double to) {
