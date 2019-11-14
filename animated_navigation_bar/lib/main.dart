@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:modern_navigation_bar/animated_navigation_bar.dart';
 
+const Color PINK = Color(0xFFe34288);
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -36,12 +38,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade200,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: PINK,
         title: Text("Tab Bar Animation"),
       ),
-//      bottomNavigationBar: FancyTabBar(),
       bottomNavigationBar: AnimatedBottomBar(
         barItems: _barItems,
         onBarTap: (index) {
