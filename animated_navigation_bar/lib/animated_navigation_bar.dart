@@ -36,9 +36,9 @@ class AnimatedBottomNavigationBar extends StatefulWidget {
   final int selectorPillPadding;
 
   AnimatedBottomNavigationBar(
-      {this.barItems,
-      this.onBarTap,
-      this.mainAxisAlignment,
+      {@required this.barItems,
+      @required this.onBarTap,
+      @required this.mainAxisAlignment,
       this.height = 85,
       this.selectorPillHeight = 40,
       this.selectorPillPadding = 15,
@@ -63,6 +63,7 @@ class _AnimatedBottomNavigationBarState
 
   List<GlobalKey> _tabItemKeys = List();
   List<GlobalKey> _iconKeys = List();
+  List<GlobalKey> _textKeys = List();
 
   @override
   void initState() {
@@ -84,12 +85,12 @@ class _AnimatedBottomNavigationBarState
     for (int i = 0; i < widget.barItems.length; i++) {
       _tabItemKeys.add(GlobalKey());
       _iconKeys.add(GlobalKey());
+      _textKeys.add(GlobalKey());
     }
   }
 
   _afterLayout(_) {
     _updateSelectorPillWidth();
-    _calculateNextPosition(selectedBarIndex);
   }
 
   @override
@@ -115,12 +116,12 @@ class _AnimatedBottomNavigationBarState
             right: widget.navigationPadding.toDouble()),
         child: Stack(
           children: <Widget>[
+            Row(
+              children: _buildTextItems(),
+            ),
             IgnorePointer(
-              child: AnimatedPositioned(
-                duration: Duration(milliseconds: widget.animationTime),
-                left
-//              child: Align(
-//                alignment: Alignment(_positionAnimation.value, 0),
+              child: Align(
+                alignment: Alignment(_positionAnimation.value, 0),
                 child: AnimatedContainer(
                   height: widget.selectorPillHeight,
                   width: _selectorWidth,
@@ -154,6 +155,7 @@ class _AnimatedBottomNavigationBarState
 
   List<Widget> _buildBarItems() {
     List<Widget> _barItems = List();
+
     for (int i = 0; i < widget.barItems.length; i++) {
       var item = widget.barItems[i];
       bool isSelected = selectedBarIndex == i;
@@ -203,9 +205,9 @@ class _AnimatedBottomNavigationBarState
                       duration: Duration(milliseconds: widget.animationTime),
                       curve: Curves.easeOutExpo,
                       vsync: this,
-                      child: Text(
-                        isSelected ? "  " + item.text : "",
-                        style: TextStyle(color: Colors.white),
+                      child: Container(
+                        child: Text(isSelected ? "  " + item.text : "",
+                            style: TextStyle(color: Colors.white)),
                       ),
                     )
                   ],
@@ -219,31 +221,51 @@ class _AnimatedBottomNavigationBarState
     return _barItems;
   }
 
+  List<Widget> _buildTextItems() {
+    List<Widget> textItems = List();
+    for (int i = 0; i < widget.barItems.length; i++) {
+      textItems.add(
+        Offstage(
+            child: Text("  " + widget.barItems[i].text, key: _textKeys[i])),
+      );
+    }
+    return textItems;
+  }
+
   double _getScreenWidth() => MediaQuery.of(context).size.width;
 
   double _calculateNextPosition(int i) {
     switch (widget.mainAxisAlignment) {
       case MainAxisAlignment.spaceBetween:
-        {
-          return -1 + (i / (widget.barItems.length - 1)) * 2;
-        }
-        break;
+        return -1 + (i / (widget.barItems.length - 1)) * 2;
       case MainAxisAlignment.start:
+        if (i == 0) return -1;
 //        return -1 + (i * (_getTabIconWidth(i) + widget.selectorPillPadding) / _getScreenWidth() * 3.5);
         double leftSpacing = 0;
         for (int j = 0; j < i; j++) {
           leftSpacing += _getTabIconWidth(j) + widget.selectorPillPadding * 2;
         }
 
+        double newTabWidth = (_getTabIconWidth(i) +
+                _getTabTextWidth(i) +
+                widget.selectorPillPadding * 2) / 2;
+//        print("left spacing: $leftSpacing\tnew tab width spacing: $newTabWidth\tscreen width: " + _getScreenWidth().toString());
 //        leftSpacing = _getTabIconWidth(0) + widget.selectorPillPadding * 2;
-        print("Left spacing: $leftSpacing\t_getScreenwidth(): " +
-            _getScreenWidth().toString() +
-            "\tresult: " +
-            (-1 + (leftSpacing + _selectorWidth / 2) / (_getScreenWidth()))
-                .toString());
-        return -1 + (leftSpacing + _selectorWidth / 2) / (_getScreenWidth());
-        break;
+//        print("Left spacing: $leftSpacing\t_getScreenwidth(): " +
+//            _getScreenWidth().toString() +
+//            "\tresult: " +
+//            (-1 + (leftSpacing + _selectorWidth / 2) / (_getScreenWidth()))
+//                .toString());
+
+        return -1 + ((_getTabIconWidth(0) + widget.selectorPillPadding * 2) + (_getTabIconWidth(1) +
+            _getTabTextWidth(1) +
+            widget.selectorPillPadding * 2) / 2) / (_getScreenWidth() - widget.navigationPadding * 2) * 2;
+
+
+        return -1 +
+            (leftSpacing + newTabWidth) / (_getScreenWidth() - widget.navigationPadding * 2) * 2;
       case MainAxisAlignment.end:
+        if (i == widget.barItems.length - 1) return 1;
         // TODO: Handle this case.
         break;
       case MainAxisAlignment.center:
@@ -267,13 +289,19 @@ class _AnimatedBottomNavigationBarState
 
   double _getSelectorLocation() {
     final RenderBox _renderBoxTab =
-    _tabItemKeys[selectedBarIndex].currentContext.findRenderObject();
+        _tabItemKeys[selectedBarIndex].currentContext.findRenderObject();
     return _renderBoxTab.localToGlobal(Offset.zero).dx;
   }
 
-  _getTabIconWidth(i) {
+  double _getTabIconWidth(i) {
     final RenderBox _renderBoxTab =
         _iconKeys[i].currentContext.findRenderObject();
+    return _renderBoxTab.size.width;
+  }
+
+  double _getTabTextWidth(i) {
+    final RenderBox _renderBoxTab =
+        _textKeys[i].currentContext.findRenderObject();
     return _renderBoxTab.size.width;
   }
 
