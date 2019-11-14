@@ -43,8 +43,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         backgroundColor: PINK,
         title: Text("Tab Bar Animation"),
       ),
-      bottomNavigationBar: AnimatedBottomBar(
+      bottomNavigationBar: AnimatedBottomNavigationBar(
         barItems: _barItems,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         onBarTap: (index) {
           setState(() {
             selectedBarIndex = index;
@@ -53,7 +54,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
               'You have pushed the button this many times:',

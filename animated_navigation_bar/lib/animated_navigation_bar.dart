@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
-class AnimatedBottomBar extends StatefulWidget {
+class AnimatedBottomNavigationBar extends StatefulWidget {
   ///The navigation bar items
   final List<BarItem> barItems;
 
   ///Triggered every time an item in the navigation bar is tapped
   final Function onBarTap;
+
+  ///Set the alignment and spacing of the navigation items
+  final MainAxisAlignment mainAxisAlignment;
 
   ///The height of the navigation bar
   final double height;
@@ -32,9 +35,10 @@ class AnimatedBottomBar extends StatefulWidget {
   ///The left and right padding between the selector pill and the icon and text inside
   final int selectorPillPadding;
 
-  AnimatedBottomBar(
+  AnimatedBottomNavigationBar(
       {this.barItems,
       this.onBarTap,
+      this.mainAxisAlignment,
       this.height = 85,
       this.selectorPillHeight = 40,
       this.selectorPillPadding = 15,
@@ -44,11 +48,12 @@ class AnimatedBottomBar extends StatefulWidget {
       this.navigationPadding = 30});
 
   @override
-  _AnimatedBottomBarState createState() => _AnimatedBottomBarState();
+  _AnimatedBottomNavigationBarState createState() =>
+      _AnimatedBottomNavigationBarState();
 }
 
-class _AnimatedBottomBarState extends State<AnimatedBottomBar>
-    with TickerProviderStateMixin {
+class _AnimatedBottomNavigationBarState
+    extends State<AnimatedBottomNavigationBar> with TickerProviderStateMixin {
   int selectedBarIndex;
   double _selectorWidth = 99;
 
@@ -57,6 +62,7 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
   Animation<double> _positionAnimation;
 
   List<GlobalKey> _tabItemKeys = List();
+  List<GlobalKey> _iconKeys = List();
 
   @override
   void initState() {
@@ -77,11 +83,13 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
 
     for (int i = 0; i < widget.barItems.length; i++) {
       _tabItemKeys.add(GlobalKey());
+      _iconKeys.add(GlobalKey());
     }
   }
 
   _afterLayout(_) {
     _updateSelectorPillWidth();
+    _calculateNextPosition(selectedBarIndex);
   }
 
   @override
@@ -108,8 +116,11 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
         child: Stack(
           children: <Widget>[
             IgnorePointer(
-              child: Align(
-                alignment: Alignment(_positionAnimation.value, 0),
+              child: AnimatedPositioned(
+                duration: Duration(milliseconds: widget.animationTime),
+                left
+//              child: Align(
+//                alignment: Alignment(_positionAnimation.value, 0),
                 child: AnimatedContainer(
                   height: widget.selectorPillHeight,
                   width: _selectorWidth,
@@ -131,7 +142,7 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
             Center(
               child: Row(
                 mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: widget.mainAxisAlignment,
                 children: _buildBarItems(),
               ),
             )
@@ -152,24 +163,29 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
             setState(() {
               selectedBarIndex = i;
               widget.onBarTap(selectedBarIndex);
-              _initAnimationAndStart(_positionAnimation.value, -1 + (i / (widget.barItems.length - 1)) * 2);
+              _initAnimationAndStart(
+                  _positionAnimation.value, _calculateNextPosition(i));
               _updateSelectorPillWidth();
             });
           },
           child: Stack(
             alignment: Alignment.center,
             children: <Widget>[
-              AnimatedContainer(
-                width: widget.selectorPillPadding * 2 + 25.0,
+              FittedBox(
+                fit: BoxFit.none,
+                child: AnimatedContainer(
+                  width: widget.selectorPillPadding * 2 + 25.0,
 //                width:  (MediaQuery.of(context).size.width -
 //                            (_selectorWidth + widget.navigationPadding * 4)) /
-//                        (widget.barItems.length),
-                //to completely fill, set to (widget.barItems.length - 1), but that causes fractional overflow
-                height: widget.height,
-                decoration:
-                    BoxDecoration(color: Colors.cyanAccent.withOpacity(0.0)), //tapable area (also use for debugging)
-                curve: Curves.easeOutExpo,
-                duration: Duration(milliseconds: widget.animationTime),
+//                        (widget.barItems.length - 1),
+                  //to completely fill, set to (widget.barItems.length - 1), but that causes fractional overflow
+                  height: widget.height,
+                  decoration:
+                      BoxDecoration(color: Colors.cyanAccent.withOpacity(0.5)),
+                  //tapable area (also use for debugging)
+                  curve: Curves.easeOutExpo,
+                  duration: Duration(milliseconds: widget.animationTime),
+                ),
               ),
               Padding(
                 padding: EdgeInsets.only(
@@ -178,8 +194,11 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
                 child: Row(
                   key: _tabItemKeys[i],
                   children: <Widget>[
-                    Icon(item.iconData,
-                        color: isSelected ? Colors.white : widget.color),
+                    Icon(
+                      item.iconData,
+                      color: isSelected ? Colors.white : widget.color,
+                      key: _iconKeys[i],
+                    ),
                     AnimatedSize(
                       duration: Duration(milliseconds: widget.animationTime),
                       curve: Curves.easeOutExpo,
@@ -200,10 +219,62 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
     return _barItems;
   }
 
+  double _getScreenWidth() => MediaQuery.of(context).size.width;
+
+  double _calculateNextPosition(int i) {
+    switch (widget.mainAxisAlignment) {
+      case MainAxisAlignment.spaceBetween:
+        {
+          return -1 + (i / (widget.barItems.length - 1)) * 2;
+        }
+        break;
+      case MainAxisAlignment.start:
+//        return -1 + (i * (_getTabIconWidth(i) + widget.selectorPillPadding) / _getScreenWidth() * 3.5);
+        double leftSpacing = 0;
+        for (int j = 0; j < i; j++) {
+          leftSpacing += _getTabIconWidth(j) + widget.selectorPillPadding * 2;
+        }
+
+//        leftSpacing = _getTabIconWidth(0) + widget.selectorPillPadding * 2;
+        print("Left spacing: $leftSpacing\t_getScreenwidth(): " +
+            _getScreenWidth().toString() +
+            "\tresult: " +
+            (-1 + (leftSpacing + _selectorWidth / 2) / (_getScreenWidth()))
+                .toString());
+        return -1 + (leftSpacing + _selectorWidth / 2) / (_getScreenWidth());
+        break;
+      case MainAxisAlignment.end:
+        // TODO: Handle this case.
+        break;
+      case MainAxisAlignment.center:
+        // TODO: Handle this case.
+        break;
+      case MainAxisAlignment.spaceAround:
+        // TODO: Handle this case.
+        break;
+      case MainAxisAlignment.spaceEvenly:
+        // TODO: Handle this case.
+        break;
+    }
+    return -1 + (i / (widget.barItems.length - 1)) * 2;
+  }
+
   _updateSelectorPillWidth() {
     final RenderBox _renderBoxTab =
         _tabItemKeys[selectedBarIndex].currentContext.findRenderObject();
     _selectorWidth = _renderBoxTab.size.width + widget.selectorPillPadding * 2;
+  }
+
+  double _getSelectorLocation() {
+    final RenderBox _renderBoxTab =
+    _tabItemKeys[selectedBarIndex].currentContext.findRenderObject();
+    return _renderBoxTab.localToGlobal(Offset.zero).dx;
+  }
+
+  _getTabIconWidth(i) {
+    final RenderBox _renderBoxTab =
+        _iconKeys[i].currentContext.findRenderObject();
+    return _renderBoxTab.size.width;
   }
 
   _initAnimationAndStart(double from, double to) {
