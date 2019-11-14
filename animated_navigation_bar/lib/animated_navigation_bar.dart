@@ -160,7 +160,7 @@ class _AnimatedBottomBarState extends State<AnimatedBottomBar>
             alignment: Alignment.center,
             children: <Widget>[
               AnimatedContainer(
-                width: (MediaQuery.of(context).size.width - widget.navigationPadding * 2) / (widget.barItems.length * 1.5),
+                width: widget.selectorPillPadding * 2 + 25.0,
 //                width:  (MediaQuery.of(context).size.width -
 //                            (_selectorWidth + widget.navigationPadding * 4)) /
 //                        (widget.barItems.length),
